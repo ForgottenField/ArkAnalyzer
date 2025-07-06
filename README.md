@@ -23,7 +23,7 @@ npm audit fix --force
 
 # 运行空指针检查器（Null Pointer Dereference Checker）
 
-1. 导航到`tests\samples\UndefinedVariableTest.ts`文件.
+1. 导航到`tests/samples/UndefinedVariableTest.ts`文件.
 2. 通过`config.buildFromProjectDir`指定待测项目.
 ```ts
 config.buildFromProjectDir("tests/resources/ifds/UndefinedVariable");
