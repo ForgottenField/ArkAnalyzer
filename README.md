@@ -20,3 +20,21 @@ npm install
 ```shell
 npm audit fix --force
 ```
+
+# 运行空指针检查器（Null Pointer Dereference Checker）
+
+1. 导航到`tests\samples\UndefinedVariableTest.ts`文件.
+2. 通过`config.buildFromProjectDir`指定待测项目.
+```ts
+config.buildFromProjectDir("tests/resources/ifds/UndefinedVariable");
+```
+3. 指定分析所需的入口方法。
+```ts
+const defaultMethod = scene.getFiles()[0].getDefaultClass().getDefaultArkMethod();
+let method = ModelUtils.getMethodWithName("u4",defaultMethod!);
+```
+4. 运行检查器
+```shell
+npm run nulltest
+```
+5. 导航到`output/report.json`文件，检查分析结果
