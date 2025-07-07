@@ -102,7 +102,8 @@ def main():
             existing_columns = set(existing_df.columns)
             if 'Error Type' in existing_columns and 'File Names' in existing_columns:
                 for _, row in existing_df.iterrows():
-                    error_type = row['Error Type']
+                    # Ensure error_type from Excel is a string to prevent mixed types
+                    error_type = str(row['Error Type'])
                     filenames_str = str(row['File Names'])
                     if error_type not in aggregated_results:
                         aggregated_results[error_type] = []
@@ -216,10 +217,12 @@ def main():
                 continue
             
             # 4. Update aggregated results in memory
-            if error_type not in aggregated_results:
-                aggregated_results[error_type] = []
-            if output_filename not in aggregated_results[error_type]:
-                aggregated_results[error_type].append(output_filename)
+            # Ensure error_type from AI is a string to prevent mixed-type key errors
+            str_error_type = str(error_type) if error_type is not None else "None"
+            if str_error_type not in aggregated_results:
+                aggregated_results[str_error_type] = []
+            if output_filename not in aggregated_results[str_error_type]:
+                aggregated_results[str_error_type].append(output_filename)
             
             # 5. Write .ets file
             os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
@@ -242,7 +245,8 @@ def main():
         return
 
     final_data_list = []
-    for error_type, filenames in sorted(aggregated_results.items()):
+    # Sort by keys converted to strings to ensure consistent ordering
+    for error_type, filenames in sorted(aggregated_results.items(), key=lambda item: str(item[0])):
         final_data_list.append({
             'Error Type': error_type,
             'File Names': ','.join(sorted(filenames))
