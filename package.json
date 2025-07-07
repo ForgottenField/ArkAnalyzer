@@ -22,8 +22,10 @@
   },
   "dependencies": {
     "commander": "13.1.0",
+    "dotenv": "^17.0.1",
     "log4js": "6.9.1",
-    "ohos-typescript": "^4.9.5-r4"
+    "ohos-typescript": "^4.9.5-r4",
+    "openai": "^5.8.2"
   },
   "bundledDependencies": [
     "ohos-typescript"
@@ -34,5 +36,8 @@
     "typedoc": "^0.28.0",
     "typedoc-plugin-markdown": "^4.6.3",
     "vitest": "^1.5.0"
-  }
+  },
+  "bundleDependencies": [
+    "ohos-typescript"
+  ]
 }
