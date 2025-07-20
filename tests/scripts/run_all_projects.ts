@@ -7,8 +7,10 @@ import { UndefinedVariableChecker, UndefinedVariableSolver } from '../../src';
 import { NPDReportManager } from '../../src/core/dataflow/NPDReport';
 import { LLMFilter } from '../../src/core/dataflow/LLMFilter';
 import * as XLSX from 'xlsx';
+import { ArkMethod } from '../../src/core/model/ArkMethod';
 
 dotenv.config();
+
 const projectsRoot = process.env.PROJECTS_ROOT || './projects';
 const absoluteRoot = path.resolve(projectsRoot);
 const outputDirName = 'output';
@@ -66,7 +68,7 @@ runAnalysisBatch().catch(err => {
     console.error("批量分析执行出错：", err);
 })
 
-export async function analyzeProject(projectPath: string, outputPath: string, reportManager: NPDReportManager){
+async function analyzeProject(projectPath: string, outputPath: string, reportManager: NPDReportManager){
     let config: SceneConfig = new SceneConfig();
     config.buildFromProjectDir(projectPath);
     const scene = new Scene();
@@ -75,8 +77,10 @@ export async function analyzeProject(projectPath: string, outputPath: string, re
 
     const startTime = Date.now();
     for (const method of scene.getMethods()) {
-        if (method.getName() !== "main")
-            continue
+        // if (isExcludedMethod(method))
+        //     continue;
+        if (!isIncludedMethod(method))
+            continue;
         const cfg = method.getCfg();
         if (cfg !== undefined && cfg !== null) {
             const problem = new UndefinedVariableChecker([...cfg.getBlocks()][0].getStmts()[method.getParameters().length],method);
@@ -87,7 +91,8 @@ export async function analyzeProject(projectPath: string, outputPath: string, re
     }
 
     const llmFilter = new LLMFilter();
-    await llmFilter.processReportNormally(scene, reportManager);
+    await llmFilter.processReportConcurrently(scene, reportManager);
+    // await llmFilter.processReportNormally(scene, reportManager);
     const endTime = Date.now();
     const durationMs = endTime - startTime;
     const reportFile = path.join(outputPath, 'report.json');
@@ -105,6 +110,24 @@ export async function analyzeProject(projectPath: string, outputPath: string, re
     //     const reportFile = path.join(outputPath, 'report.json');
     //     reportManager.exportJSONToFile(reportFile, durationMs);
     // }
+}
+
+// function isExcludedMethod(methods: ArkMethod): boolean {
+//     const excludedMethods = [
+//         '%dflt', '%instInit', '%statInit', 'constructor'
+//     ]
+//     return excludedMethods.includes(methods.getName());
+// }
+
+function isIncludedMethod(methods: ArkMethod): boolean {
+    const includedClass = "Ability";
+    const mainMethodName = "main";
+    const NPDClassName = "NullPointerDereference";
+    if (methods.getDeclaringArkClass().getName().includes(includedClass) || methods.getName() === mainMethodName || methods.getSignature().getMethodSubSignature().getMethodName().includes(NPDClassName)) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 function writeSummaryToExcel(data: ProjectSummary[]) {

@@ -27,6 +27,7 @@ interface AggregatedFact {
     factVariable: string;
     reason: string;
     node: string;
+    line: number;   
     pathSummary: DetailedHierarchicalPathSummary;
 }
 
@@ -105,6 +106,7 @@ export class LLMFilter {
                     factVariable: fact.fact,
                     reason: fact.reason,
                     node: fact.node,
+                    line: fact.line,
                     pathSummary: pathSummary,
                 };
                 
@@ -174,6 +176,7 @@ export class LLMFilter {
                     factVariable: factName,
                     reason: report.reason,
                     node: report.node.toString(),
+                    line: report.line,
                     pathSummary: pathSummary
                 };
 
@@ -199,17 +202,15 @@ export class LLMFilter {
         if (!fullCode || startLine === 0) {
             return "// 无法获取此方法的源代码或起始行号。";
         }
-
-        const lines = fullCode.split('\n');
+        const lines = fullCode.split(/\r?\n/);
         const markedLines = lines.map((line, index) => {
             const currentLineNumber = startLine + index;
             if (markers.has(currentLineNumber)) {
-                // 在目标行后添加指定的标记文本
-                return `${line} // <<< ${markers.get(currentLineNumber)}`;
+                const markerText = markers.get(currentLineNumber);
+                return `${line} // <<< ${markerText}`;
             }
             return line;
         });
-
         return markedLines.join('\n');
     }
 
@@ -250,6 +251,9 @@ export class LLMFilter {
             fact: AggregatedFact;
         };
         const taskList: FilterTask[] = [];
+        
+        // 收集需要删除的项目
+        const toDelete = new Map<string, AggregatedFact[]>();
 
         for (const entryMethod in processedReport) {
             for (const fact of processedReport[entryMethod]) {
@@ -330,32 +334,52 @@ export class LLMFilter {
                     const result = await this.processPrompt(filledPrompt);
                     console.log(result);
 
+                    // 收集需要删除的项目，而不是立即删除
                     if (result.answer?.toLowerCase() === 'false positive') {
-                        const reports = reportManager.map.get(entryMethod);
-                        if (reports && Array.isArray(reports)) {
-                            // 🛡️ 精准匹配目标
-                            const targetIndex = reports.findIndex((report: NPDReport) => {
-                                const factName = (report.fact instanceof Local)
-                                    ? report.fact.getName()
-                                    : report.fact.getType().toString();
-                                return factName === fact.factVariable &&
-                                    report.reason === fact.reason &&
-                                    report.node.toString() === fact.node;
-                            });
-
-                            if (targetIndex !== -1) {
-                                reports.splice(targetIndex, 1); // ✅ 只删除精准匹配项
-                                console.log(`✅ 删除 ${entryMethod} 中第 ${targetIndex + 1} 个 false positive 报告`);
-                            } else {
-                                console.warn("⚠️ 未找到匹配项，跳过删除");
-                            }
+                        if (!toDelete.has(entryMethod)) {
+                            toDelete.set(entryMethod, []);
                         }
+                        toDelete.get(entryMethod)!.push(fact);
+                        console.log(`📝 标记删除 ${entryMethod} 中的 false positive 报告`);
                     }
                 }
             })
         );
 
+        // 等待所有并发任务完成
         await Promise.all(tasks);
+        // 统一处理删除操作
+        console.log("\n--- 开始统一删除 false positive 报告 ---");
+        for (const [entryMethod, factsToDelete] of toDelete) {
+            const reports = reportManager.map.get(entryMethod);
+            if (reports && Array.isArray(reports)) {
+                let deletedCount = 0;
+                
+                // 从后往前删除，避免索引变化问题
+                for (let i = reports.length - 1; i >= 0; i--) {
+                    const report = reports[i];
+                    const factName = (report.fact instanceof Local)
+                        ? report.fact.getName()
+                        : report.fact.getType().toString();
+                    
+                    // 检查是否在删除列表中
+                    const shouldDelete = factsToDelete.some(fact => 
+                        factName === fact.factVariable &&
+                        report.reason === fact.reason &&
+                        report.node.toString() === fact.node &&
+                        report.line === fact.line
+                    );
+                    
+                    if (shouldDelete) {
+                        reports.splice(i, 1);
+                        deletedCount++;
+                    }
+                }
+                
+                console.log(`✅ 删除 ${entryMethod} 中 ${deletedCount} 个 false positive 报告`);
+            }
+        }
+        
         console.log("LLM 消除误报完成");
     }
 

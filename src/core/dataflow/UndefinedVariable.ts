@@ -365,6 +365,7 @@ export class UndefinedVariableSolver extends DataflowSolver<Value> {
         // console.log(`path edges has been outputed to ./output/pathedge_${methodSig}.txt`);
 
         this.extractNPDReports(methodSig, this.pathEdgeSet, reportManager);
+        console.log(`NPD reports for method ${methodSig} have been extracted and added to the report manager.`);
     }
 
     protected extractNPDReports(methodSig:string, edges: Set<PathEdge<Value>>, reportManager:NPDReportManager) {    
@@ -387,7 +388,7 @@ export class UndefinedVariableSolver extends DataflowSolver<Value> {
                     continue;
                 }
                 if (this.isNullPointerDereferenceTriggered(stmt, fact)) {
-                    const report = new NPDReport(fact, stmt, `Variable '${fact}' used before being defined (undefined)`);
+                    const report = new NPDReport(fact, stmt, `Variable '${fact}' used when it is null or undefined.`);
                     // TODO: complement the def-use chain searching
                     this.retrieveDataFlowPaths(fact, stmt, report);
                     reportManager.addReport(methodSig, report);
