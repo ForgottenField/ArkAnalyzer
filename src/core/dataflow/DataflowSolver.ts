@@ -188,6 +188,13 @@ export abstract class DataflowSolver<D> {
         }
     }
 
+    protected propagate_head(edge: PathEdge<D>): void {
+        if (!this.pathEdgeSetHasEdge(edge)) {
+            this.workList.unshift(edge);
+            this.pathEdgeSet.add(edge);
+        }
+    }
+
     protected processExitNode(edge: PathEdge<D>): void {
         let startEdgePoint: PathEdgePoint<D> = edge.edgeStart;
         let exitEdgePoint: PathEdgePoint<D> = edge.edgeEnd;
@@ -240,6 +247,8 @@ export abstract class DataflowSolver<D> {
         let end: PathEdgePoint<D> = edge.edgeEnd;
         let stmts: Stmt[] = [...this.getChildren(end.node)].reverse();
         for (let stmt of stmts) {
+            if (stmt === null)
+                continue;
             let flowFunction: FlowFunction<D> = this.problem.getNormalFlowFunction(end.node, stmt);
             let set: Set<D> = flowFunction.getDataFacts(end.fact);
             for (let fact of set) {
@@ -263,6 +272,8 @@ export abstract class DataflowSolver<D> {
         }
         let returnSite: Stmt = this.getReturnSiteOfCall(callEdgePoint.node);
         for (let callee of callees) {
+            if (callee === undefined || callee === null)
+                continue;
             let callFlowFunc: FlowFunction<D> = this.problem.getCallFlowFunction(invokeStmt, callee);
             if (!callee.getCfg()) {
                 continue;
@@ -324,12 +335,14 @@ export abstract class DataflowSolver<D> {
                 this.laterEdges.delete(pathEdge);
             }
             let targetStmt: Stmt = pathEdge.edgeEnd.node;
-            if (this.isCallStatement(targetStmt)) {
-                this.processCallNode(pathEdge);
-            } else if (this.isExitStatement(targetStmt)) {
-                this.processExitNode(pathEdge);
-            } else {
-                this.processNormalNode(pathEdge);
+            if (targetStmt !== null) {
+                if (this.isCallStatement(targetStmt)) {
+                    this.processCallNode(pathEdge);
+                } else if (this.isExitStatement(targetStmt)) {
+                    this.processExitNode(pathEdge);
+                } else {
+                    this.processNormalNode(pathEdge);
+                }
             }
         }
     }

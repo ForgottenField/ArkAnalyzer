@@ -18,18 +18,20 @@
     "postinstall": "node script/npmInstall.js",
     "copyCollectionDefintion": "ts-node script/typescriptCollectionDefinitionCopy.ts",
     "cfgtest": "ts-node ./tests/samples/cfgDot.ts",
-    "nulltest": "ts-node ./tests/samples/UndefinedVariableTest.ts"
+    "nulltest": "ts-node ./tests/samples/UndefinedVariableTest.ts",
+    "npdtest": "ts-node ./tests/samples/NPDTest.ts",
+    "stmttest": "ts-node ./src/core/base/Stmt.ts",
+    "run_all_projects": "ts-node ./tests/scripts/run_all_projects.ts"
   },
   "dependencies": {
     "commander": "13.1.0",
-    "dotenv": "^17.0.1",
+    "dotenv": "^17.2.0",
     "log4js": "6.9.1",
     "ohos-typescript": "^4.9.5-r4",
-    "openai": "^5.8.2"
+    "openai": "^5.10.1",
+    "proxy-agent": "^6.5.0",
+    "xlsx": "^0.18.5"
   },
-  "bundledDependencies": [
-    "ohos-typescript"
-  ],
   "devDependencies": {
     "@vitest/coverage-v8": "^1.5.0",
     "ts-node": "^10.9.1",

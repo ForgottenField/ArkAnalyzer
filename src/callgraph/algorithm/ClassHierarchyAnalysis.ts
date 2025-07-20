@@ -64,17 +64,30 @@ export class ClassHierarchyAnalysis extends AbstractAnalysis {
                 }
 
                 let possibleCalleeMethod = arkClass.getMethodWithName(calleeMethod!.getName());
-
-                if (
-                    possibleCalleeMethod &&
-                    possibleCalleeMethod.isGenerated() &&
-                    arkClass.getSignature().toString() !== declareClass.getSignature().toString()
-                ) {
-                    // remove the generated method in extended classes
-                    return;
+                let currentClass = arkClass;
+                while (possibleCalleeMethod === null) {
+                    // if the method is not found, it may be an abstract method
+                    // continue to search in the super class
+                    let temp = currentClass.getSuperClass();
+                    if (temp !== null) {
+                        currentClass = temp;
+                        possibleCalleeMethod = currentClass.getMethodWithName(calleeMethod!.getName());
+                    } else {
+                        // if no super class, break the loop
+                        break;
+                    }
                 }
 
-                if (possibleCalleeMethod && !possibleCalleeMethod.isAbstract()) {
+                // if (
+                //     possibleCalleeMethod &&
+                //     possibleCalleeMethod.isGenerated() &&
+                //     arkClass.getSignature().toString() !== declareClass.getSignature().toString()
+                // ) {
+                //     // remove the generated method in extended classes
+                //     return;
+                // }
+
+                if (possibleCalleeMethod) {
                     resolveResult.push(
                         this.cg.getCallSiteManager().newCallSite(
                             invokeStmt, undefined,
